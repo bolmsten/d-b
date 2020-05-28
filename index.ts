@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { ApolloServer } from 'apollo-server-express';
 import cookieParser from 'cookie-parser';
 import express, { Request, Response, NextFunction } from 'express';
-import graphqlHTTP, { RequestInfo } from 'express-graphql';
 import 'reflect-metadata';
 import jwt from 'express-jwt';
 import { buildSchema } from 'type-graphql';
@@ -36,15 +36,16 @@ async function bootstrap() {
     secret,
   });
 
-  const extensions = async (info: RequestInfo) => {
-    if (info.result.errors) {
-      logger.logError('Failed GRAPHQL execution', {
-        result: info.result,
-        operationName: info.operationName,
-        user: info.context.user,
-      });
-    }
-  };
+  // TODO: See how this can be used in apollo server.
+  // const extensions = async (info: RequestInfo) => {
+  //   if (info.result.errors) {
+  //     logger.logError('Failed GRAPHQL execution', {
+  //       result: info.result,
+  //       operationName: info.operationName,
+  //       user: info.context.user,
+  //     });
+  //   }
+  // };
 
   app.use(
     authMiddleware,
@@ -75,11 +76,9 @@ async function bootstrap() {
     validate: false,
   });
 
-  app.use(
-    '/graphql',
-    graphqlHTTP(async (req: Req) => {
-      // Adds the currently logged-in user to the context object, which makes it available to the resolvers
-      // The user sends a JWT token that is decrypted, this JWT token contains information about roles and ID
+  const apollo = new ApolloServer({
+    schema,
+    context: async ({ req }: { req: Req }) => {
       let user = null;
       const userId = req.user?.user?.id as number;
 
@@ -89,14 +88,11 @@ async function bootstrap() {
 
       const context: ResolverContext = { ...baseContext, user };
 
-      return {
-        schema,
-        graphiql: true,
-        context,
-        extensions,
-      };
-    })
-  );
+      return context;
+    },
+  });
+
+  apollo.applyMiddleware({ app, path: '/graphql' });
 
   app.use(files);
 
