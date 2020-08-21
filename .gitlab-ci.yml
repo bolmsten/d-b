@@ -37,19 +37,43 @@ docker build:
   only:
     - develop
 
-autodeploy:
+autodeploy-test:
   image: ubuntu:latest
   stage: autodeploy
+  environment:
+    name: test
+    url: https://useroffice-test.esss.lu.se/graphql
   script:
     - echo $CI_COMMIT_SHA
     - apt-get update -qq
-    - 'which ssh-agent || ( apt-get install -qq openssh-client )'
+    - "which ssh-agent || ( apt-get install -qq openssh-client )"
     - eval $(ssh-agent -s)
     - ssh-add <(echo "$SSH_PRIVATE_KEY_GEN")
     - mkdir -p ~/.ssh
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
-    - until ssh jekabskarklins@scicat09.esss.lu.se "/home/jekabskarklins/duo-kubernetes/backend/autodeploy.sh dev"; do sleep 5; done
+    - ssh jekabskarklins@scicat09.esss.lu.se "/home/jekabskarklins/duo-kubernetes/backend/autodeploy.sh dev"
   tags:
     - dind
   only:
     - develop
+
+autodeploy-production:
+  image: ubuntu:latest
+  stage: autodeploy
+  environment:
+    name: production
+    url: https://useroffice.ess.eu/
+  script:
+    - echo $CI_COMMIT_SHA
+    - apt-get update -qq
+    - "which ssh-agent || ( apt-get install -qq openssh-client )"
+    - eval $(ssh-agent -s)
+    - ssh-add <(echo "$SSH_PRIVATE_KEY_GEN")
+    - mkdir -p ~/.ssh
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    #- ssh jekabskarklins@scicat09.esss.lu.se "/home/jekabskarklins/duo-kubernetes/backend/autodeploy.sh prod"
+  when: manual
+  tags:
+    - dind
+  only:
+    - master
