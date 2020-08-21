@@ -56,6 +56,7 @@ autodeploy-test:
     - dind
   only:
     - develop
+    - adding-environments
 
 autodeploy-production:
   image: ubuntu:latest
